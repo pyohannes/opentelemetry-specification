@@ -136,18 +136,23 @@ The default sampler is `ParentBased(root=AlwaysOn)`.
 parent `SampledFlag`, the `TraceIdRatioBased` should be used as a delegate of
 the `ParentBased` sampler specified below.
 * Description MUST be `TraceIdRatioBased{0.000100}`.
+* A trace must be sampled if the following equation holds:
 
-TODO: Add details about how the `TraceIdRatioBased` is implemented as a function
-of the `TraceID`.
+  ```
+  num(TraceId) / (2^128 - 1) < TraceIdRatio
+  ```
 
-##### Requirements for `TraceIdRatioBased` sampler algorithm
+  `num(TraceId)` is numeric representation of a trace id obtained by by
+  interpreting the trace id byte sequence as a as a big endian number. 
+  `2^128 - 1` is the highest possible value for such a number. If the quotient 
+  of those two values is less than the given `TraceIdRatio`, then the trace
+  should be sampled.
 
-* The sampling algorithm MUST be deterministic. A trace identified by a given
-`TraceId` is sampled or not independent of language, time, etc. To achieve this,
-implementations MUST use a deterministic hash of the `TraceId` when computing
-the sampling decision. By ensuring this, running the sampler on any child `Span`
-will produce the same decision.
-* A `TraceIdRatioBased` sampler with a given sampling rate MUST also sample all
+The sampling algorithm is deterministic. A trace identified by a given `TraceId`
+is sampled or not independent of language, time, etc. Running the sampler on any
+child `Span` will produce the same decision.
+
+A `TraceIdRatioBased` sampler with a given sampling rate also samples all
 traces that any `TraceIdRatioBased` sampler with a lower sampling rate would
 sample. This is important when a backend system may want to run with a higher
 sampling rate than the frontend system, this way all frontend traces will
