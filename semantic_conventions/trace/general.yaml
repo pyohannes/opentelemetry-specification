@@ -35,11 +35,11 @@ groups:
           Transport protocol used. See note below.
       - id: protocol.name
         type: string
-        brief: 'Application Layer protocol according to the OSI Model.'
+        brief: 'Application layer protocol used. See note below.'
         examples: 'amqp'
       - id: protocol.version
         type: string
-        brief: 'Version of the Application Layer protocol used.'
+        brief: 'Version of the application layer protocol used.'
         examples: '0.9.1'
       - id: peer.ip
         type: string
