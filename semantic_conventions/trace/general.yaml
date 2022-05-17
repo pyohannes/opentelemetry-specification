@@ -35,7 +35,7 @@ groups:
           Transport protocol used. See note below.
       - id: protocol.name
         type: string
-        brief: 'Application layer protocol used. See note below.'
+        brief: 'Application layer protocol used, according to the OSI Model. The value SHOULD be normalized to lowercase.'
         examples: 'amqp'
       - id: protocol.version
         type: string

@@ -35,7 +35,7 @@ the `net.peer.*` properties of a client are equal to the `net.host.*` properties
 | Attribute  | Type | Description  | Examples  | Required |
 |---|---|---|---|---|
 | `net.transport` | string | Transport protocol used. See note below. | `ip_tcp` | No |
-| `net.protocol.name` | string | Application layer protocol used. See note below. | `amqp` | No |
+| `net.protocol.name` | string | Application layer protocol used, according to the OSI Model. The value SHOULD be normalized to lowercase. | `amqp` | No |
 | `net.protocol.version` | string | Version of the application layer protocol used. | `0.9.1` | No |
 | `net.peer.ip` | string | Remote address of the peer (dotted decimal for IPv4 or [RFC5952](https://tools.ietf.org/html/rfc5952) for IPv6) | `127.0.0.1` | No |
 | `net.peer.port` | int | Remote port number. | `80`; `8080`; `443` | No |
@@ -65,8 +65,6 @@ the `net.peer.*` properties of a client are equal to the `net.host.*` properties
 | `other` | Something else (non IP-based). |
 
 **[1]:** Signals that there is only in-process communication not using a "real" network protocol in cases where network attributes would normally be expected. Usually all other network attributes can be left out in that case.
-
-`net.protocol.name` corresponds to an Application Layer protocol according to the OSI Model, e. g. `amqp`, `dns`, `ntp`, or `ssh`. The value SHOULD be normalized to lowercase.
 
 `net.host.connection.type` has the following list of well-known values. If one of them applies, then the respective value MUST be used, otherwise a custom value MAY be used.
 
