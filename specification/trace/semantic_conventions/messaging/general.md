@@ -1,4 +1,4 @@
-# Messaging systems
+# General semantic conventions for messaging systems
 
 **Status**: [Experimental](../../document-status.md)
 
@@ -26,12 +26,8 @@
   * [Consumer attributes](#consumer-attributes)
   * [Per-message attributes](#per-message-attributes)
   * [Attributes specific to certain messaging systems](#attributes-specific-to-certain-messaging-systems)
-    + [RabbitMQ](#rabbitmq)
-    + [Apache Kafka](#apache-kafka)
-    + [Apache RocketMQ](#apache-rocketmq)
 - [Examples](#examples)
   * [Topic with multiple consumers](#topic-with-multiple-consumers)
-  * [Apache Kafka with Quarkus or Spring Boot Example](#apache-kafka-with-quarkus-or-spring-boot-example)
   * [Batch receiving](#batch-receiving)
   * [Batch processing](#batch-processing)
 
@@ -360,79 +356,7 @@ All attributes that are specific for a messaging system SHOULD be populated in `
 * `messaging.{system}.consumer`: Describes message consumer properties
 * `messaging.{system}.batch`: Describes message batch properties
 
-#### RabbitMQ
-
-In RabbitMQ, the destination is defined by an *exchange* and a *routing key*.
-`messaging.destination.name` MUST be set to the name of the exchange. This will be an empty string if the default exchange is used.
-
-<!-- semconv messaging.rabbitmq -->
-| Attribute  | Type | Description  | Examples  | Requirement Level |
-|---|---|---|---|---|
-| `messaging.rabbitmq.destination.routing_key` | string | RabbitMQ message routing key. | `myKey` | Conditionally Required: If not empty. |
-<!-- endsemconv -->
-
-#### Apache Kafka
-
-For Apache Kafka, the following additional attributes are defined:
-
-<!-- semconv messaging.kafka -->
-| Attribute  | Type | Description  | Examples  | Requirement Level |
-|---|---|---|---|---|
-| `messaging.kafka.message.key` | string | Message keys in Kafka are used for grouping alike messages to ensure they're processed on the same partition. They differ from `messaging.message.id` in that they're not unique. If the key is `null`, the attribute MUST NOT be set. [1] | `myKey` | Recommended |
-| `messaging.kafka.consumer.group` | string | Name of the Kafka Consumer Group that is handling the message. Only applies to consumers, not producers. | `my-group` | Recommended |
-| `messaging.kafka.client_id` | string | Client Id for the Consumer or Producer that is handling the message. | `client-5` | Recommended |
-| `messaging.kafka.destination.partition` | int | Partition the message is sent to. | `2` | Recommended |
-| `messaging.kafka.source.partition` | int | Partition the message is received from. | `2` | Recommended |
-| `messaging.kafka.message.offset` | int | The offset of a record in the corresponding Kafka partition. | `42` | Recommended |
-| `messaging.kafka.message.tombstone` | boolean | A boolean that is true if the message is a tombstone. |  | Conditionally Required: [2] |
-
-**[1]:** If the key type is not string, it's string representation has to be supplied for the attribute. If the key has no unambiguous, canonical string form, don't include its value.
-
-**[2]:** If value is `true`. When missing, the value is assumed to be `false`.
-<!-- endsemconv -->
-
-For Apache Kafka producers, [`peer.service`](./span-general.md#general-remote-service-attributes) SHOULD be set to the name of the broker or service the message will be sent to.
-The `service.name` of a Consumer's Resource SHOULD match the `peer.service` of the Producer, when the message is directly passed to another service.
-If an intermediary broker is present, `service.name` and `peer.service` will not be the same.
-
-#### Apache RocketMQ
-
-Specific attributes for Apache RocketMQ are defined below.
-
-<!-- semconv messaging.rocketmq -->
-| Attribute  | Type | Description  | Examples  | Requirement Level |
-|---|---|---|---|---|
-| `messaging.rocketmq.namespace` | string | Namespace of RocketMQ resources, resources in different namespaces are individual. | `myNamespace` | Required |
-| `messaging.rocketmq.client_group` | string | Name of the RocketMQ producer/consumer group that is handling the message. The client type is identified by the SpanKind. | `myConsumerGroup` | Required |
-| `messaging.rocketmq.client_id` | string | The unique identifier for each client. | `myhost@8742@s8083jm` | Required |
-| `messaging.rocketmq.message.delivery_timestamp` | int | The timestamp in milliseconds that the delay message is expected to be delivered to consumer. | `1665987217045` | Conditionally Required: [1] |
-| `messaging.rocketmq.message.delay_time_level` | int | The delay time level for delay message, which determines the message delay time. | `3` | Conditionally Required: [2] |
-| `messaging.rocketmq.message.group` | string | It is essential for FIFO message. Messages that belong to the same message group are always processed one by one within the same consumer group. | `myMessageGroup` | Conditionally Required: If the message type is FIFO. |
-| `messaging.rocketmq.message.type` | string | Type of message. | `normal` | Recommended |
-| `messaging.rocketmq.message.tag` | string | The secondary classifier of message besides topic. | `tagA` | Recommended |
-| `messaging.rocketmq.message.keys` | string[] | Key(s) of message, another way to mark message besides message id. | `[keyA, keyB]` | Recommended |
-| `messaging.rocketmq.consumption_model` | string | Model of message consumption. This only applies to consumer spans. | `clustering` | Recommended |
-
-**[1]:** If the message type is delay and delay time level is not specified.
-
-**[2]:** If the message type is delay and delivery timestamp is not specified.
-
-`messaging.rocketmq.message.type` MUST be one of the following:
-
-| Value  | Description |
-|---|---|
-| `normal` | Normal message |
-| `fifo` | FIFO message |
-| `delay` | Delay message |
-| `transaction` | Transaction message |
-
-`messaging.rocketmq.consumption_model` MUST be one of the following:
-
-| Value  | Description |
-|---|---|
-| `clustering` | Clustering consumption model |
-| `broadcasting` | Broadcasting consumption model |
-<!-- endsemconv -->
+Detailed semantic conventions for specific messaging systems are specified in separate documents.
 
 ## Examples
 
@@ -464,47 +388,6 @@ Process CB:                 | Span CB1 |
 | `messaging.source.kind` | | `"topic"` | `"topic"` |
 | `messaging.operation` |  | `"process"` | `"process"` |
 | `messaging.message.id` | `"a1"` | `"a1"`| `"a1"` |
-
-### Apache Kafka with Quarkus or Spring Boot Example
-
-Given is a process P, that publishes a message to a topic T1 on Apache Kafka.
-One process, CA, receives the message and publishes a new message to a topic T2 that is then received and processed by CB.
-
-Frameworks such as Quarkus and Spring Boot separate processing of a received message from producing subsequent messages out.
-For this reason, receiving (Span Rcv1) is the parent of both processing (Span Proc1) and producing a new message (Span Prod2).
-The span representing message receiving (Span Rcv1) should not set `messaging.operation` to `receive`,
-as it does not only receive the message but also converts the input message to something suitable for the processing operation to consume and creates the output message from the result of processing.
-
-```
-Process P:  | Span Prod1 |
---
-Process CA:              | Span Rcv1 |
-                                | Span Proc1 |
-                                  | Span Prod2 |
---
-Process CB:                           | Span Rcv2 |
-```
-
-| Field or Attribute | Span Prod1 | Span Rcv1 | Span Proc1 | Span Prod2 | Span Rcv2
-|-|-|-|-|-|-|
-| Span name | `"T1 publish"` | `"T1 receive"` | `"T1 process"` | `"T2 publish"` | `"T2 receive`" |
-| Parent |  | Span Prod1 | Span Rcv1 | Span Rcv1 | Span Prod2 |
-| Links |  |  | |  |  |
-| SpanKind | `PRODUCER` | `CONSUMER` | `CONSUMER` | `PRODUCER` | `CONSUMER` |
-| Status | `Ok` | `Ok` | `Ok` | `Ok` | `Ok` |
-| `peer.service` | `"myKafka"` |  |  | `"myKafka"` |  |
-| `service.name` |  | `"myConsumer1"` | `"myConsumer1"` |  | `"myConsumer2"` |
-| `messaging.system` | `"kafka"` | `"kafka"` | `"kafka"` | `"kafka"` | `"kafka"` |
-| `messaging.destination.name` | `"T1"` | | | | |
-| `messaging.destination.kind` | `"topic"` | | | | |
-| `messaging.source.name` |  | `"T1"` | `"T1"` | `"T2"` | `"T2"` |
-| `messaging.source.kind` |  | `"topic"` | `"topic"` | `"topic"` | `"topic"` |
-| `messaging.operation` |  |  | `"process"` |  | `"receive"` |
-| `messaging.kafka.message.key` | `"myKey"` | `"myKey"` | `"myKey"` | `"anotherKey"` | `"anotherKey"` |
-| `messaging.kafka.consumer.group` |  | `"my-group"` | `"my-group"` |  | `"another-group"` |
-| `messaging.kafka.client_id` |  | `"5"` | `"5"` | `"5"` | `"8"` |
-| `messaging.kafka.partition` | `"1"` | `"1"` | `"1"` | `"3"` | `"3"` |
-| `messaging.kafka.message.offset` | `"12"` | `"12"` | `"12"` | `"32"` | `"32"` |
 
 ### Batch receiving
 
